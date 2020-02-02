@@ -1,0 +1,97 @@
+/**
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ *  Name        : Low Battery Alert
+ *  Author      : Geeman Yip
+ *  Date        : 2020-02-01
+ *  Description : Notifies you when the battery of a device is below a configured threshold
+ *
+ */
+ 
+definition(
+    name: "Low Battery Alert",
+    namespace: "geeman",
+    author: "Geeman Yip",
+    description: "Notifies you when the battery of a device is below a configured threshold",
+    category: "Convenience",
+    iconUrl: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/LowBatteryAlert/icon60.png",
+    iconX2Url: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/LowBatteryAlert/icon120.png"
+)
+
+preferences {
+    section("About") {
+        paragraph "Select the battery operated devices to monitor. When the battery of those devices falls below the configured threshold, you will recieve a push notification of the device name and battery level. Configure the execution time during a convenient time of day in which you want to be notified. i.e. You won't be able to change the batteries when you're at work."
+		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
+    }
+	section("Settings") {
+		input "devices", "capability.battery", title: "Select battery operated devices to monitor", multiple: true, required: true
+		input "time", "time", title: "Daily time to execute and send notifications", multiple: false, required: true
+		input "alertLevel", "number", title: "Notify if battery is equal to or below this percent (0-100)", multiple: false, defaultValue: 15
+	}
+}
+
+def log(msg) {
+	if(debug) {
+		def debugMsg = "DEBUG: ${msg}"
+		sendPush(debugMsg)
+	}
+	
+	log.debug msg
+}
+
+def installed() {
+	log("installed()")
+	
+    initialize()
+}
+
+def updated() {
+	log("updated()")
+	
+    unschedule()
+    initialize()
+}
+
+def initialize() {
+	log("initialize()")
+	
+	// create scheduled job to check battery levels
+    schedule(time, checkBatteryLevels)
+	
+	// check immediately
+    checkBatteryLevels()
+}
+
+def checkBatteryLevels() {
+	log("checkBatteryLevels(): Alert when battery is below ${alertLevel}%")
+	
+	// only run if the configured alert level is a valid value
+	if(alertLevel >= 0 && alertLevel <= 100)
+	{
+		// enumerate devices specified
+		for(device in devices) {
+			// retrieve current battery level
+			def currentLevel = device.currentValue("battery").toInteger()
+			
+			def msg = "${device.displayName} battery level is ${currentLevel}%"
+			log(msg)
+			
+			// send alert if equal to or below configured alert level
+			if (currentLevel <= alertLevel) {
+				sendPush(msg)
+			}
+		}
+	}
+	else
+	{
+		log("Alert level is not within range of 0-100 (${alertLevel}%)")
+	}
+}
