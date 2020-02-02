@@ -1,0 +1,132 @@
+/**
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ *  Name        : Automatic Lights
+ *  Author      : Geeman Yip
+ *  Date        : 2020-02-02
+ *  Description : Automatically turns lights on or off based on sensor activity
+ *
+ */
+ 
+definition(
+    name: "Automatic Lights",
+    namespace: "geeman",
+    author: "Geeman Yip",
+    description: "Automatically turns lights on or off based on sensor activity",
+    category: "Convenience",
+    iconUrl: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/AutomaticLights/Icon60.png",
+    iconX2Url: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/AutomaticLights/Icon120.png"
+)
+
+preferences {
+    section("About") {
+        paragraph "Select the sensors or devices to monitor. When an event is triggered, you will be send a notification with the device name and state."
+		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
+    }
+	section("Automatically Turn On") {
+		input "onSwitches", "capability.switch", title: "Select switches to turn on automatically", multiple: true, required: false
+		input "onSwitchesBrightness", "number", title: "Select illuminance to set switches of capability is available (only works on dimmer switches)", multiple: false, required: false
+		input "onMotions", "capability.motionSensor", title: "Select motion sensors to turn lights on when activity is detected", multiple: true, required: false
+		input "onSwitchesOff", "capability.switch", title: "Select switches that have to be off in order for light switches to be automatically turned on", multiple: true, required: false
+	}
+	section("Automatically Turn Off") {
+		input "offSwitches", "capability.switch", title: "Select switches to turn off automatically", multiple: true, required: false
+		input "offMotions", "capability.motionSensor", title: "Select motion sensors to monitor for inactivity", multiple: true, required: false
+		input "offMotionDuration", "number", title: "Enter the number of minutes of inactivity before switches are turned off", multiple: false, required: false
+	}
+}
+
+def log(msg) {
+	if(debug) {
+		def debugMsg = "DEBUG: ${msg}"
+		sendPush(debugMsg)
+	}
+	
+	log.debug msg
+}
+
+def installed() {
+	log("installed()")
+	
+    subscribe()
+}
+
+def updated() {
+	log("updated()")
+	
+    unsubscribe()
+    subscribe()
+}
+
+def subscribe() {
+	log("subscribe()")
+	
+	// subscribe to motion sensors for activity
+	subscribe(onMotions, "motion.active", onMotionActivityEvent)
+
+	// subscribe to motion sensors for inactivity
+	subscribe(offMotions, "motion.active", offMotionActivityEvent)
+	subscribe(offMotions, "motion.inactive", offMotionInactivityEvent)
+}
+
+/* ON EVENTS */
+
+def onMotionActivityEvent(evt) {
+	log("onMotionActivityEvent(): ${evt.displayName} changed to ${evt.value}")
+
+	// check if switch off conditions are met
+	def isOn = onSwitchesOff.currentSwitch.findAll { switchVal ->
+        switchVal == "on" ? true : false
+	}
+	
+	if(isOn.size() == 0) {
+		turnOnSwitches()
+	}
+}
+
+def turnOnSwitches() {
+	log("turnOnSwitches()")
+	
+	// turn on all switches
+	for(onSwitch in onSwitches) {
+		// set the switch level if the switch has the capability
+		// set level before turning on so we don't get a flash
+		if(onSwitch.hasCommand("setLevel")) {
+			log("turnOnSwitches(): ${onSwitch.displayName} is dimmable")
+			onSwitch.setLevel(onSwitchesBrightness)
+		}
+		
+		// turn on switch
+		onSwitch.on()
+	}
+
+}
+
+/* OFF EVENTS */
+
+def offMotionActivityEvent(evt) {
+	log("offMotionActivityEvent(): ${evt.displayName} changed to ${evt.value}")
+	unschedule(turnOffSwitches)
+}
+
+def offMotionInactivityEvent(evt) {
+	log("offMotionInactivityEvent(): ${evt.displayName} changed to ${evt.value}")
+	
+	def delay = offMotionDuration * 60
+	runIn(delay, turnOffSwitches, [overwrite: true])
+}
+
+def turnOffSwitches() {
+	log("turnOffSwitches()")
+
+	// turn off all switches
+	offSwitches.off()
+}
