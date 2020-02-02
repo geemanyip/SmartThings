@@ -1,0 +1,274 @@
+/**
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ *  Name        : Geo Mode
+ *  Author      : Geeman Yip
+ *  Date        : 2020-02-01
+ *  Description : Automatically changes the mode of your location based on the geofence configured and the associated devices
+ *
+ */
+
+definition(
+    name: "Geo Mode",
+    namespace: "geeman",
+    author: "Geeman Yip",
+    description: "Automatically changes the mode of your location based on the geofence configured and the associated devices",
+    category: "Convenience",
+    iconUrl: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/GeoMode/icon60.png",
+    iconX2Url: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/GeoMode/icon120.png"
+)
+
+preferences {
+    section("About") {
+        paragraph "Automatically changes the mode of your location based on the geofence configured and the associated devices presense. Send messages as the location mode changes in addition to execute routines when modes change."
+		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
+    }
+	
+	section("Home Settings") {
+		input "homeMode", "mode", title: "Select the mode when one or more people are home", defaultValue: "Home", multiple: false, required: true
+		input "fromHomeModes", "mode", title: "Select the modes that are allowed to switch to home from", defaultValue: "Away", multiple: true, required: true
+		input "homeMessageEnabled", "bool", title: "Send message when mode is changed to home", defaultValue: false, multiple: false, required: true
+		input "homeMessage", "text", title: "Message to send when the mode is changed to home", defaultValue: "Welcome home!", multiple: false, required: true
+		input "homeRoutineEnabled", "bool", title: "Execute routine when mode is changed to home", defaultValue: true, multiple: false, required: true
+		input "homeRoutine", "text", title: "Routine to execute when home", defaultValue: "I'm Back!", multiple: false, required: true
+	}
+
+	section("Away Settings") {
+		input "awayMode", "mode", title: "Select the mode when everyone is away", defaultValue: "Away", multiple: false, required: true
+		input "fromAwayModes", "mode", title: "Select the modes that are allowed to switch to away from", defaultValue: "Home", multiple: true, required: true
+		input "awayMessageEnabled", "bool", title: "Send message when mode is changed to away", defaultValue: true, multiple: false, required: true
+		input "awayMessage", "text", title: "Message to send when the mode is changed to away", defaultValue: "Goodbye! The home has been secured.", multiple: false, required: true
+		input "awayRoutineEnabled", "bool", title: "Execute routine when mode is changed to away", defaultValue: true, multiple: false, required: true
+		input "awayRoutine", "text", title: "Routine to execute when away", defaultValue: "Goodbye!", multiple: false, required: true
+	}
+
+	section("Person #1") {
+		input "person1", "capability.presenceSensor", title: "Select person to monitor", multiple: false, required: true
+		input "person1HomeNotify", "bool", title: "Send message when this person arrives home", defaultValue: true, multiple: false, required: true
+		input "person1HomeMessage", "text", title: "Message to send when this person arrives home", defaultValue: "Welcome home person #1.", multiple: false, required: true
+		input "person1AwayNotify", "bool", title: "Send message when this person leaves", defaultValue: false, multiple: false, required: true
+		input "person1AwayMessage", "text", title: "Message to send when this person leaves", defaultValue: "Goodbye person #1!", multiple: false, required: true
+	}
+
+	section("Person #2") {
+		input "person2", "capability.presenceSensor", title: "Select person to monitor", multiple: false, required: false
+		input "person2HomeNotify", "bool", title: "Send message when this person arrives home", defaultValue: true, multiple: false, required: true
+		input "person2HomeMessage", "text", title: "Message to send when this person arrives home", defaultValue: "Welcome home person #2.", multiple: false, required: true
+		input "person2AwayNotify", "bool", title: "Send message when this person leaves", defaultValue: false, multiple: false, required: true
+		input "person2AwayMessage", "text", title: "Message to send when this person leaves", defaultValue: "Goodbye person #2!", multiple: false, required: true
+	}
+
+	section("Person #3") {
+		input "person3", "capability.presenceSensor", title: "Select person to monitor", multiple: false, required: false
+		input "person3HomeNotify", "bool", title: "Send message when this person arrives home", defaultValue: true, multiple: false, required: true
+		input "person3HomeMessage", "text", title: "Message to send when this person arrives home", defaultValue: "Welcome home person #3.", multiple: false, required: true
+		input "person3AwayNotify", "bool", title: "Send message when this person leaves", defaultValue: false, multiple: false, required: true
+		input "person3AwayMessage", "text", title: "Message to send when this person leaves", defaultValue: "Goodbye person #3!", multiple: false, required: true
+	}
+
+	section("Person #4") {
+		input "person4", "capability.presenceSensor", title: "Select person to monitor", multiple: false, required: false
+		input "person4HomeNotify", "bool", title: "Send message when this person arrives home", defaultValue: true, multiple: false, required: true
+		input "person4HomeMessage", "text", title: "Message to send when this person arrives home", defaultValue: "Welcome home person #4.", multiple: false, required: true
+		input "person4AwayNotify", "bool", title: "Send message when this person leaves", defaultValue: false, multiple: false, required: true
+		input "person4AwayMessage", "text", title: "Message to send when this person leaves", defaultValue: "Goodbye person #4!", multiple: false, required: true
+	}
+}
+
+def log(msg) {
+	if(debug) {
+		def debugMsg = "DEBUG: ${msg}"
+		sendPush(debugMsg)
+	}
+	
+	log.debug msg
+}
+
+def installed() {
+	log("installed()")
+	
+    subscribe()
+}
+
+def updated() {
+	log("updated()")
+	
+    unsubscribe()
+    subscribe()
+}
+
+def subscribe() {
+	log("updated()")
+	
+	// subscribe to person #1
+	subscribe(person1, "presence", presenseEvent)
+	
+	// subscribe to person #2
+	subscribe(person2, "presence", presenseEvent)
+	
+	// subscribe to person #3
+	subscribe(person3, "presence", presenseEvent)
+	
+	// subscribe to person #4
+	subscribe(person4, "presence", presenseEvent)
+}
+
+def presenseEvent(evt) {
+	// check if at least one person is home
+	def isHome = checkPresense(person1, "present", false) ||
+	             checkPresense(person2, "present", false) ||
+				 checkPresense(person3, "present", false) ||
+				 checkPresense(person4, "present", false)
+				 
+	// check if everyone is away
+	def isAway = checkPresense(person1, "not present", true) &&
+	             checkPresense(person2, "not present", true) &&
+				 checkPresense(person3, "not present", true) &&
+				 checkPresense(person4, "not present", true)
+	
+	// notify of presense change
+	presenseChange(evt.device)
+	
+	if(isHome) {
+		log("presenseEvent(): One or more people are home")
+		changeModeToHome()
+	}
+	
+	if(isAway) {
+		log("presenseEvent(): Everyone is away")
+		changeModeToAway()
+	}
+}
+
+def checkPresense(person, value, defaultReturn) {
+	log("checkPresense(): ${person.displayName} has a current presense of ${person.currentPresence}")
+	
+	if(person == null) {
+		return defaultReturn
+	}
+	
+	if(person.currentPresence == value) {
+		log("checkPresense(): ${person.displayName} == ${value}")
+		return true
+	}
+	
+	return false
+}
+
+def changeModeToHome() {
+	for(mode in fromHomeModes) {
+		log("changeModeToHome(): From Mode = ${mode}, Location Mode = ${location.mode}")
+		
+		if(mode != homeMode && mode == location.mode) {		
+			log("changeModeToHome(): Changing mode to home (${homeMode})")
+			setLocationMode(homeMode)
+
+			// execute home routine after changing location mode in case security features are enabled
+			if(homeRoutineEnabled) {
+				log("changeModeToHome(): Executing home routine ${homeRoutine}")
+				location.helloHome?.execute(homeRoutine)
+			}
+
+			if(homeMessageEnabled) {
+				log("changeModeToHome(): Sending home message (${homeMessage})")
+				sendPush(homeMessage)
+			}
+		}
+	}
+}
+
+def changeModeToAway() {
+	for(mode in fromAwayModes) {
+		log("changeModeToAway(): From Mode = ${mode}, Location Mode = ${location.mode}")
+		
+		if(mode != awayMode && mode == location.mode) {
+			// execute away routine before changing to away so we don't trigger security features by accident
+			if(awayRoutineEnabled) {
+				log("changeModeToAway(): Executing away routine ${awayRoutine}")
+				location.helloHome?.execute(awayRoutine)
+			}
+
+			log("changeModeToAway(): Changing mode to away (${awayMode})")
+			setLocationMode(awayMode)
+			
+			if(awayMessageEnabled) {
+				log("changeModeToAway(): Sending away message (${awayMessage})")
+				sendPush(awayMessage)
+			}
+		}
+	}
+}
+
+def presenseChange(person) {
+	log("presenseChange(): ${person.displayName} presense changed to ${person.currentPresence}")
+	
+	if(person.id == person1.id) {
+		log("presenseChange(): Matched person #1")
+		switch(person1.currentPresence) {
+			case "present":
+				if(person1HomeNotify) {
+					sendPush(person1HomeMessage)
+				}
+				break
+				
+			case "not present":
+				if(person1AwayNotify) {
+					sendPush(person1AwayMessage)
+				}
+				break
+		}
+	} else if(person.id == person2.id) {
+		log("presenseChange(): Matched person #2")
+		switch(person2.currentPresence) {
+			case "present":
+				if(person2HomeNotify) {
+					sendPush(person2HomeMessage)
+				}
+				break
+				
+			case "not present":
+				if(person2AwayNotify) {
+					sendPush(person2AwayMessage)
+				}
+				break
+		}
+	} else if(person.id == person3.id) {
+		log("presenseChange(): Matched person #3")
+		switch(person3.currentPresence) {
+			case "present":
+				if(person3HomeNotify) {
+					sendPush(person3HomeMessage)
+				}
+				break
+				
+			case "not present":
+				if(person3AwayNotify) {
+					sendPush(person3AwayMessage)
+				}
+				break
+		}
+	} else if(person.id == person4.id) {
+		log("presenseChange(): Matched person #4")
+		switch(person4.currentPresence) {
+			case "present":
+				if(person4HomeNotify) {
+					sendPush(person4HomeMessage)
+				}
+				break
+				
+			case "not present":
+				if(person4AwayNotify) {
+					sendPush(person4AwayMessage)
+				}
+				break
+		}
+	}
+}
