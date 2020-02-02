@@ -68,7 +68,7 @@ def retrieveBatteryLevels() {
 	// enumerate devices specified
 	for(device in devices) {
 		// retrieve current battery level
-		def currentValue = device.currentValue("battery")
+		def currentValue = device.currentValue("battery").toInteger()
 		
 		// send push notification of battery level
 		def msg = "${device.displayName} battery level is ${currentValue}%"
