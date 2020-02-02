@@ -33,7 +33,7 @@ preferences {
     }
 	section("Automatically Turn On") {
 		input "onSwitches", "capability.switch", title: "Select switches to turn on automatically", multiple: true, required: false
-		input "onSwitchesBrightness", "number", title: "Select illuminance to set switches of capability is available (only works on dimmer switches)", multiple: false, required: false
+		input "onSwitchesBrightness", "number", title: "Select light level of switches. Uses last setting of not specified. (only works on dimmer switches)", multiple: false, required: false
 		input "onMotions", "capability.motionSensor", title: "Select motion sensors to turn lights on when activity is detected", multiple: true, required: false
 		input "onSwitchesOff", "capability.switch", title: "Select switches that have to be off in order for light switches to be automatically turned on", multiple: true, required: false
 	}
@@ -99,7 +99,7 @@ def turnOnSwitches() {
 	for(onSwitch in onSwitches) {
 		// set the switch level if the switch has the capability
 		// set level before turning on so we don't get a flash
-		if(onSwitch.hasCommand("setLevel")) {
+		if(onSwitchesBrightness != null && onSwitch.hasCommand("setLevel")) {
 			log("turnOnSwitches(): ${onSwitch.displayName} is dimmable")
 			onSwitch.setLevel(onSwitchesBrightness)
 		}
