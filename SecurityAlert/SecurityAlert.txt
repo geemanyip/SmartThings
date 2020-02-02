@@ -28,13 +28,18 @@ definition(
 
 preferences {
     section("About") {
-        paragraph "Select the contact sensors, motion sensors, or lockable devices to monitor. When an event is triggered, you will be send a notification with the device name and state."
+        paragraph "Select the sensors or devices to monitor. When an event is triggered, you will be send a notification with the device name and state."
 		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
     }
 	section("Devices to Monitor") {
-		input "contactDevices", "capability.contactSensor", title: "Select contact devices to monitor", multiple: true, required: false
-		input "motionDevices", "capability.motionSensor", title: "Select motion devices to monitor", multiple: true, required: false
-		input "lockDevices", "capability.lock", title: "Select locks to monitor", multiple: true, required: false
+		input "contactDevicesOpened", "capability.contactSensor", title: "Select contact sensors to get notified when opened", multiple: true, required: false
+		input "contactDevicesClosed", "capability.contactSensor", title: "Select contact sensors to get notified when closed", multiple: true, required: false
+		input "motionDevicesActive", "capability.motionSensor", title: "Select motion sensors to get notified when motion detected", multiple: true, required: false
+		input "motionDevicesInactive", "capability.motionSensor", title: "Select motion sensors to get notified when motion stops", multiple: true, required: false
+		input "lockDevicesUnlocked", "capability.lock", title: "Select locks to get notified when unlocked", multiple: true, required: false
+		input "lockDevicesLocked", "capability.lock", title: "Select locks to get notified when locked", multiple: true, required: false
+		input "switchDevicesOn", "capability.switch", title: "Select switches to get notified when turned on", multiple: true, required: false
+		input "switchDevicesOff", "capability.switch", title: "Select switches to get notified when turned off", multiple: true, required: false
 	}
 }
 
@@ -64,41 +69,74 @@ def subscribe() {
 	log("subscribe()")
 	
 	// subscribe to contact sensor events
-	subscribe(contactDevices, "contact", contactEvent)
+	subscribe(contactDevicesOpened, "contact.open", contactEvent)
+	subscribe(contactDevicesClosed, "contact.closed", contactEvent)
 	
 	// subscribe to motion sensor events
-	subscribe(motionDevices, "motion.active", motionEvent)
+	subscribe(motionDevicesActive, "motion.active", motionEvent)
+	subscribe(motionDevicesInactive, "motion.inactive", motionEvent)
 	
 	// subscribe to lockable device events
-	subscribe(lockDevices, "lock", lockEvent)
+	subscribe(lockDevicesUnlocked, "lock.unlocked", lockEvent)
+	subscribe(lockDevicesLocked, "lock.locked", lockEvent)
 }
 
 def contactEvent(evt) {
 	log("contactEvent(): ${evt.displayName} changed to ${evt.value}")
 	
 	def msg = "${evt.displayName} was "
-	switch($evt.value) {
+	switch(evt.value) {
 		case "open":
 			msg += "opened"
+			break
+			
+		case "closed":
+			msg += "closed"
 			break
 			
 		default:
 			msg += "${evt.value}"
 			break;
-	}	
+	}
 	sendPush(msg)
 }
 
 def motionEvent(evt) {
 	log("motionEvent(): ${evt.displayName} changed to ${evt.value}")
 
-	def msg = "Motion was detected by ${evt.displayName}"
+	def msg = ""
+	switch(evt.value) {
+		case "active":
+			msg = "Motion was detected by ${evt.displayName}"
+			break
+			
+		case "inactive":
+			msg = "Inactivity detected by ${evt.displayName}"
+			break
+			
+		default:
+			msg = "Unknown event was detected by ${evt.displayName}"
+			break;
+	}
 	sendPush(msg)
 }
 
 def lockEvent(evt) {
 	log("lockEvent(): ${evt.displayName} changed to ${evt.value}")
 
-	def msg = "${evt.displayName} was ${evt.value}"
+	def msg = "${evt.displayName} was "
+	switch(evt.value) {
+		case "locked":
+			msg += "locked"
+			break
+			
+		case "unlocked":
+			msg += "unlocked"
+			break
+			
+		default:
+			msg += "${evt.value}"
+			break;
+	}
 	sendPush(msg)
 }
