@@ -1,0 +1,108 @@
+/**
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ *  Name        : Left It Open
+ *  Author      : Geeman Yip
+ *  Date        : 2020-02-02
+ *  Description : Notifies you when a door or window has been left open longer than a specified amount of time. Based on the
+ *                Left It Open SmartApp by SmartThings except the notification tells you the total amount of time left open
+ *
+ */
+ 
+definition(
+    name: "Left It Open",
+    namespace: "geeman",
+    author: "Geeman Yip",
+    description: "Notifies you when you have left a door or window open longer that a specified amount of time.",
+    category: "Convenience",
+    iconUrl: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/LeftItOpen/Icon60.png",
+    iconX2Url: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/LeftItOpen/Icon120.png"
+)
+
+preferences {
+    section("About") {
+        paragraph "Monitors a door or window and notified you when it has been open longer than a specified time. You will then continue to get notified after the specified period."
+		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
+    }
+	section("Settings") {
+		input "contact", "capability.contactSensor", title: "Monitor this door or window", multiple: false, required: true
+		input "openThreshold", "number", description: "Notify me if it's open for more than this many minutes", defaultValue: 10, multiple: false, required: true
+	}
+}
+
+def log(msg) {
+	if(debug) {
+		def debugMsg = "DEBUG: ${msg}"
+		sendPush(debugMsg)
+	}
+	
+	log.debug msg
+}
+
+def installed() {
+	log("installed()")
+	
+	subscribe()
+}
+
+def updated() {
+	log("updated()")
+	
+	unsubscribe()
+	subscribe()
+}
+
+def subscribe() {
+	log("subscribe()")
+	
+	subscribe(contact, "contact.open", doorOpenEvent)
+	subscribe(contact, "contact.closed", doorClosedEvent)
+}
+
+def doorOpenEvent(evt) {
+	log("doorOpenEvent(): ${evt.displayName} changed to ${evt.value}")
+	
+	// reset total open time
+	state.totalMinutes = 0
+
+	if(openThreshold > 0) {
+		def delay = openThreshold * 60
+		runIn(delay, doorStillOpen, [overwrite: true])
+	} else {
+		log("doorOpenEvent(): Invalid threshold specified")
+	}
+}
+
+def doorClosedEvent(evt) {
+	log("doorClosedEvent(): ${evt.displayName} changed to ${evt.value}")
+
+	unschedule(doorStillOpen)
+}
+
+def doorStillOpen() {
+	log("doorStillOpen()")
+
+	def contactState = contact.currentState("contact")
+	if (contactState.value == "open") {
+		state.totalMinutes = state.totalMinutes + openThreshold
+		sendMessage()
+		
+		def delay = openThreshold * 60
+		runIn(delay, doorStillOpen, [overwrite: false])
+	} else {
+		log("doorStillOpen(): Door is closed")
+	}
+}
+
+void sendMessage() {
+	def msg = "${contact.displayName} has been left open for ${state.totalMinutes} minutes"
+	sendPush(msg)
+}
