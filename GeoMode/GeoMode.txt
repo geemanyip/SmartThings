@@ -37,8 +37,10 @@ preferences {
 		input "fromHomeModes", "mode", title: "Select the modes that are allowed to switch to home from", defaultValue: "Away", multiple: true, required: true
 		input "homeMessageEnabled", "bool", title: "Send message when mode is changed to home", defaultValue: false, multiple: false, required: true
 		input "homeMessage", "text", title: "Message to send when the mode is changed to home", defaultValue: "Welcome home!", multiple: false, required: true
-		input "homeRoutineEnabled", "bool", title: "Execute routine when mode is changed to home", defaultValue: true, multiple: false, required: true
+		input "homeRoutineEnabled", "bool", title: "Execute routine when mode is changed to home", defaultValue: false, multiple: false, required: true
 		input "homeRoutine", "text", title: "Routine to execute when home", defaultValue: "I'm Back!", multiple: false, required: true
+		input "homeRoutinePerPersonEnabled", "bool", title: "Execute routine when each person arrives home", defaultValue: true, multiple: false, required: true
+		input "homeRoutinePerPerson", "text", title: "Routine to execute when each person arrives home", defaultValue: "I'm Back!", multiple: false, required: true
 	}
 
 	section("Away Settings") {
@@ -182,12 +184,12 @@ def changeModeToHome() {
 				setLocationMode(homeMode)
 
 				// execute home routine after changing location mode in case security features are enabled
-				if(homeRoutineEnabled && homeRoutine != null) {
+				if(homeRoutineEnabled && homeRoutine != null && homeRoutine != "") {
 					log("changeModeToHome(): Executing home routine ${homeRoutine}")
 					location.helloHome?.execute(homeRoutine)
 				}
 
-				if(homeMessageEnabled && homeMessage != null) {
+				if(homeMessageEnabled && homeMessage != null && homeMessage != "") {
 					log("changeModeToHome(): Sending home message (${homeMessage})")
 					sendPush(homeMessage)
 				}
@@ -208,7 +210,7 @@ def changeModeToAway() {
 			
 			if(mode != awayMode && mode == location.mode) {
 				// execute away routine before changing to away so we don't trigger security features by accident
-				if(awayRoutineEnabled && awayRoutine != null) {
+				if(awayRoutineEnabled && awayRoutine != null && awayRoutine != "") {
 					log("changeModeToAway(): Executing away routine ${awayRoutine}")
 					location.helloHome?.execute(awayRoutine)
 				}
@@ -216,7 +218,7 @@ def changeModeToAway() {
 				log("changeModeToAway(): Changing mode to away (${awayMode})")
 				setLocationMode(awayMode)
 				
-				if(awayMessageEnabled && awayMessage != null) {
+				if(awayMessageEnabled && awayMessage != null && awayMessage != "") {
 					log("changeModeToAway(): Sending away message (${awayMessage})")
 					sendPush(awayMessage)
 				}
@@ -236,13 +238,16 @@ def presenseChange(person) {
 		log("presenseChange(): Matched person #1")
 		switch(person1.currentPresence) {
 			case "present":
-				if(person1HomeNotify) {
+				if(homeRoutinePerPersonEnabled && homeRoutinePerPerson != null && homeRoutinePerPerson != "") {
+					location.helloHome?.execute(homeRoutinePerPerson)
+				}
+				if(person1HomeNotify && person1HomeMessage != null && person1HomeMessage != "") {
 					sendPush(person1HomeMessage)
 				}
 				break
 				
 			case "not present":
-				if(person1AwayNotify) {
+				if(person1AwayNotify && person1AwayMessage != null && person1AwayMessage != "") {
 					sendPush(person1AwayMessage)
 				}
 				break
@@ -251,13 +256,16 @@ def presenseChange(person) {
 		log("presenseChange(): Matched person #2")
 		switch(person2.currentPresence) {
 			case "present":
-				if(person2HomeNotify) {
+				if(homeRoutinePerPersonEnabled && homeRoutinePerPerson != null && homeRoutinePerPerson != "") {
+					location.helloHome?.execute(homeRoutinePerPerson)
+				}
+				if(person2HomeNotify && person2HomeMessage != null && person2HomeMessage != "") {
 					sendPush(person2HomeMessage)
 				}
 				break
 				
 			case "not present":
-				if(person2AwayNotify) {
+				if(person2AwayNotify && person2AwayMessage != null && person2AwayMessage != "") {
 					sendPush(person2AwayMessage)
 				}
 				break
@@ -266,13 +274,16 @@ def presenseChange(person) {
 		log("presenseChange(): Matched person #3")
 		switch(person3.currentPresence) {
 			case "present":
+				if(homeRoutinePerPersonEnabled && homeRoutinePerPerson != null && homeRoutinePerPerson != "") {
+					location.helloHome?.execute(homeRoutinePerPerson)
+				}
 				if(person3HomeNotify) {
 					sendPush(person3HomeMessage)
 				}
 				break
 				
 			case "not present":
-				if(person3AwayNotify) {
+				if(person3AwayNotify && person3AwayMessage != null && person3AwayMessage != "") {
 					sendPush(person3AwayMessage)
 				}
 				break
@@ -281,13 +292,16 @@ def presenseChange(person) {
 		log("presenseChange(): Matched person #4")
 		switch(person4.currentPresence) {
 			case "present":
-				if(person4HomeNotify) {
+				if(homeRoutinePerPersonEnabled && homeRoutinePerPerson != null && homeRoutinePerPerson != "") {
+					location.helloHome?.execute(homeRoutinePerPerson)
+				}
+				if(person4HomeNotify && person4HomeMessage != null && person4HomeMessage != "") {
 					sendPush(person4HomeMessage)
 				}
 				break
 				
 			case "not present":
-				if(person4AwayNotify) {
+				if(person4AwayNotify && person4AwayMessage != null && person4AwayMessage != "") {
 					sendPush(person4AwayMessage)
 				}
 				break

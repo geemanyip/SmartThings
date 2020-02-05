@@ -32,11 +32,13 @@ preferences {
 		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
     }
 	section("Devices to Monitor") {
-		input "toMode", "mode", title: "Select the mode to execute actions when changed to", multiple: false, required: true
-		input "unlockDevices", "capability.lock", title: "Select devices to unlock when mode is changed", multiple: true, required: false
-		input "lockDevices", "capability.lock", title: "Select devices to lock when mode is changed", multiple: true, required: false
-		input "modeMessageEnabled", "bool", title: "Send notification when mode is changed", multiple: false, required: false
-		input "modeMessage", "text", title: "Message to send when mode is changed", multiple: false, required: false
+		input "toMode", "mode", title: "Select the mode to execute actions when changed to mode", multiple: false, required: true
+		input "unlockDevices", "capability.lock", title: "Select devices to unlock when changed to mode", multiple: true, required: false
+		input "lockDevices", "capability.lock", title: "Select devices to lock when changed to mode", multiple: true, required: false
+		input "modeMessageEnabled", "bool", title: "Send notification when changed to mode?", defaultValue: false, multiple: false, required: true
+		input "modeMessage", "text", title: "Message to send when changed to mode", defaultValue: "", multiple: false, required: false
+		input "routineEnabled", "bool", title: "Should a routine be executed when changed to mode?", defaultValue: false, multiple: false, required: true
+		input "routineName", "text", title: "Name of routine to execute when changed to mode", defaultValue: "", multiple: false, required: false
 	}
 }
 
@@ -67,16 +69,23 @@ def subscribe() {
 	
 	// subscribe location modes
 	subscribe(location, "mode", modeChangeEvent)
+	
+	// initialize mode
+	modeChange()
 }
 
 def modeChangeEvent(evt) {
 	log("modeChangeEvent(): Current mode is ${location.mode}")
-	
+	modeChange()
+}
+
+def modeChange() {
 	if(location.mode == toMode) {
-		log("modeChangeEvent(): Executing mode actions")
+		log("modeChange(): Executing mode actions")
 
 		// unlock devices specified
 		if(lockDevices) {
+			log("modeChange(): Locking devices")
 			lockDevices.lock()
 		}
 		
@@ -84,11 +93,18 @@ def modeChangeEvent(evt) {
 		// going to do this after lock action incase there is
 		// overlap between the devices
 		if(unlockDevices) {
+			log("modeChange(): Unlocking devices")
 			unlockDevices.unlock()
 		}
 		
+		// execute routine
+		if(routineEnabled && routineName != null && routineName != "") {
+			log("modeChange(): Executing routine ${routineName}")
+			location.helloHome?.execute(routineName)
+		}
+				
 		// send message
-		if(modeMessageEnabled && modeMessage != null) {
+		if(modeMessageEnabled && modeMessage != null && modeMessage != "") {
 			sendPush(modeMessage)
 		}
 	}
