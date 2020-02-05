@@ -35,10 +35,6 @@ preferences {
 	section("Home Settings") {
 		input "homeMode", "mode", title: "Select the mode when one or more people are home", defaultValue: "Home", multiple: false, required: true
 		input "fromHomeModes", "mode", title: "Select the modes that are allowed to switch to home from", defaultValue: "Away", multiple: true, required: true
-		input "homeMessageEnabled", "bool", title: "Send message when mode is changed to home", defaultValue: false, multiple: false, required: true
-		input "homeMessage", "text", title: "Message to send when the mode is changed to home", defaultValue: "Welcome home!", multiple: false, required: true
-		input "homeRoutineEnabled", "bool", title: "Execute routine when mode is changed to home", defaultValue: false, multiple: false, required: true
-		input "homeRoutine", "text", title: "Routine to execute when home", defaultValue: "I'm Back!", multiple: false, required: true
 		input "homeRoutinePerPersonEnabled", "bool", title: "Execute routine when each person arrives home", defaultValue: true, multiple: false, required: true
 		input "homeRoutinePerPerson", "text", title: "Routine to execute when each person arrives home", defaultValue: "I'm Back!", multiple: false, required: true
 	}
@@ -46,10 +42,6 @@ preferences {
 	section("Away Settings") {
 		input "awayMode", "mode", title: "Select the mode when everyone is away", defaultValue: "Away", multiple: false, required: true
 		input "fromAwayModes", "mode", title: "Select the modes that are allowed to switch to away from", defaultValue: "Home", multiple: true, required: true
-		input "awayMessageEnabled", "bool", title: "Send message when mode is changed to away", defaultValue: true, multiple: false, required: true
-		input "awayMessage", "text", title: "Message to send when the mode is changed to away", defaultValue: "Goodbye! The home has been secured.", multiple: false, required: true
-		input "awayRoutineEnabled", "bool", title: "Execute routine when mode is changed to away", defaultValue: true, multiple: false, required: true
-		input "awayRoutine", "text", title: "Routine to execute when away", defaultValue: "Goodbye!", multiple: false, required: true
 	}
 
 	section("Person #1") {
@@ -182,17 +174,6 @@ def changeModeToHome() {
 			if(mode != homeMode && mode == location.mode) {		
 				log("changeModeToHome(): Changing mode to home (${homeMode})")
 				setLocationMode(homeMode)
-
-				// execute home routine after changing location mode in case security features are enabled
-				if(homeRoutineEnabled && homeRoutine != null && homeRoutine != "") {
-					log("changeModeToHome(): Executing home routine ${homeRoutine}")
-					location.helloHome?.execute(homeRoutine)
-				}
-
-				if(homeMessageEnabled && homeMessage != null && homeMessage != "") {
-					log("changeModeToHome(): Sending home message (${homeMessage})")
-					sendPush(homeMessage)
-				}
 				
 				break
 			}
@@ -209,19 +190,8 @@ def changeModeToAway() {
 			log("changeModeToAway(): From ${mode} to ${awayMode}, Location Mode = ${location.mode}")
 			
 			if(mode != awayMode && mode == location.mode) {
-				// execute away routine before changing to away so we don't trigger security features by accident
-				if(awayRoutineEnabled && awayRoutine != null && awayRoutine != "") {
-					log("changeModeToAway(): Executing away routine ${awayRoutine}")
-					location.helloHome?.execute(awayRoutine)
-				}
-
 				log("changeModeToAway(): Changing mode to away (${awayMode})")
 				setLocationMode(awayMode)
-				
-				if(awayMessageEnabled && awayMessage != null && awayMessage != "") {
-					log("changeModeToAway(): Sending away message (${awayMessage})")
-					sendPush(awayMessage)
-				}
 				
 				break
 			}
