@@ -1,0 +1,93 @@
+/**
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ *  Name        : Inactivity Alert
+ *  Author      : Geeman Yip
+ *  Date        : 2020-02-06
+ *  Description : Notifies you when no inactivity for the selected devices within the specified period
+ *
+ */
+ 
+definition(
+    name: "Inactivity Alert",
+    namespace: "geeman",
+    author: "Geeman Yip",
+    description: "Notifies you when no inactivity for the selected devices within the specified period",
+    category: "Convenience",
+    iconUrl: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/InactivityAlert/Icon60.png",
+    iconX2Url: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/InactivityAlert/Icon120.png"
+)
+
+preferences {
+    section("About") {
+        paragraph "Select the sensors or devices to monitor. When the selected devices stop triggering events for the specified time, you will be sent a notification with the configured message."
+		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
+    }
+	section("Devices to Monitor") {
+		input "contactDevices", "capability.contactSensor", title: "Select contact sensors to monitor", multiple: true, required: false
+		input "motionDevices", "capability.motionSensor", title: "Select motion sensors to monitor", multiple: true, required: false
+		input "lockDevices", "capability.lock", title: "Select locks to monitor", multiple: true, required: false
+		input "switchDevices", "capability.switch", title: "Select switches to monitor", multiple: true, required: false
+		input "inactivityPeriod", "number", title: "Enter the number of minutes of inactivity before sending notification", defaultValue: 10, multiple: false, required: true
+		input "inactivityMessage", "text", title: "Message to send after inactivity period", defaultValue: "No activity detected", multiple: false, required: true
+	}
+}
+
+def log(msg) {
+	if(debug) {
+		def debugMsg = "DEBUG: ${msg}"
+		sendPush(debugMsg)
+	}
+	
+	log.debug msg
+}
+
+def installed() {
+	log("installed()")
+	
+    subscribe()
+}
+
+def updated() {
+	log("updated()")
+	
+    unsubscribe()
+    subscribe()
+}
+
+def subscribe() {
+	log("subscribe()")
+	
+	// subscribe to contact sensor events
+	subscribe(contactDevices, "contact", deviceEvent)
+	subscribe(motionDevices, "motion", deviceEvent)
+	subscribe(lockDevices, "lock", deviceEvent)
+	subscribe(switchDevices, "switch", deviceEvent)
+}
+
+def deviceEvent(evt) {
+	log("deviceEvent(): ${evt.displayName} changed to ${evt.value}")
+
+	unschedule(sendInactivityNotification)
+	
+	// start timer
+	def delay = inactivityPeriod * 60
+	runIn(delay, sendInactivityNotification, [overwrite: true])
+}
+
+def sendInactivityNotification() {
+	log("sendInactivityNotification()")
+	
+	// send notification
+	if(inactivityMessage != null && inactivityMessage != "") {
+		sendPush(inactivityMessage)
+	}
+}
