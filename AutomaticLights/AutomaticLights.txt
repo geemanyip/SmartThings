@@ -28,7 +28,7 @@ definition(
 
 preferences {
     section("About") {
-        paragraph "Select the sensors or devices to monitor. When an event is triggered, you will be send a notification with the device name and state."
+        paragraph "Select the sensors or devices to monitor. When an event is triggered, you will be sent a notification with the device name and state."
 		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
     }
 	section("Automatically Turn On") {
@@ -81,6 +81,10 @@ def subscribe() {
 
 def onMotionActivityEvent(evt) {
 	log("onMotionActivityEvent(): ${evt.displayName} changed to ${evt.value}")
+	
+	// unschedule turn off event -- this prevents some timing issues
+	// which causes the lights to flash
+	unschedule(turnOffSwitches)
 
 	// check if switch off conditions are met
 	def isOn = onSwitchesOff.currentSwitch.findAll { switchVal ->
