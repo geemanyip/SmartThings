@@ -94,11 +94,12 @@ def mainPage() {
 			input "url","text",title:"Play this URL", required:false, multiple: false
 		}
 		section {
-			input "sonos", "capability.audioNotification", title: "On this Speaker player", required: true
+//			input "sonos", "capability.audioNotification", title: "On this Speaker player", required: true
+			input "speakers", "capability.audioNotification", title: "On this Speaker player", required: true, multiple: true
 		}
 		section("More options", hideable: true, hidden: true) {
 			input "resumePlaying", "bool", title: "Resume currently playing music after notification", required: false, defaultValue: true
-			href "chooseTrack", title: "Or play this music or radio station", description: song ? state.selectedSong?.station : "Tap to set", state: song ? "complete" : "incomplete"
+//			href "chooseTrack", title: "Or play this music or radio station", description: song ? state.selectedSong?.station : "Tap to set", state: song ? "complete" : "incomplete"
 
 			input "volume", "number", title: "Temporarily change volume", description: "0-100%", required: false
 			input "frequency", "decimal", title: "Minimum time between actions (defaults to every event)", description: "Minutes", required: false
@@ -117,60 +118,60 @@ def mainPage() {
 	}
 }
 
-def chooseTrack() {
-	dynamicPage(name: "chooseTrack") {
-		section{
-			input "song","enum",title:"Play this track", required:true, multiple: false, options: songOptions()
-		}
-	}
-}
+//def chooseTrack() {
+//	dynamicPage(name: "chooseTrack") {
+//		section{
+//			input "song","enum",title:"Play this track", required:true, multiple: false, options: songOptions()
+//		}
+//	}
+//}
 
-private songOptions() {
+//private songOptions() {
+//
+//	// Make sure current selection is in the set
+//
+//	def options = new LinkedHashSet()
+//	if (state.selectedSong?.station) {
+//		options << state.selectedSong.station
+//	}
+//	else if (state.selectedSong?.description) {
+//		// TODO - Remove eventually? 'description' for backward compatibility
+//		options << state.selectedSong.description
+//	}
+//
+//	// Query for recent tracks
+//	def states = sonos.statesSince("trackData", new Date(0), [max:30])
+//	def dataMaps = states.collect{it.jsonValue}
+//	options.addAll(dataMaps.collect{it.station})
+//
+//	log.trace "${options.size()} songs in list"
+//	options.take(20) as List
+//}
 
-	// Make sure current selection is in the set
-
-	def options = new LinkedHashSet()
-	if (state.selectedSong?.station) {
-		options << state.selectedSong.station
-	}
-	else if (state.selectedSong?.description) {
-		// TODO - Remove eventually? 'description' for backward compatibility
-		options << state.selectedSong.description
-	}
-
-	// Query for recent tracks
-	def states = sonos.statesSince("trackData", new Date(0), [max:30])
-	def dataMaps = states.collect{it.jsonValue}
-	options.addAll(dataMaps.collect{it.station})
-
-	log.trace "${options.size()} songs in list"
-	options.take(20) as List
-}
-
-private saveSelectedSong() {
-	try {
-		def thisSong = song
-		log.info "Looking for $thisSong"
-		def songs = sonos.statesSince("trackData", new Date(0), [max:30]).collect{it.jsonValue}
-		log.info "Searching ${songs.size()} records"
-
-		def data = songs.find {s -> s.station == thisSong}
-		log.info "Found ${data?.station}"
-		if (data) {
-			state.selectedSong = data
-			log.debug "Selected song = $state.selectedSong"
-		}
-		else if (song == state.selectedSong?.station) {
-			log.debug "Selected existing entry '$song', which is no longer in the last 20 list"
-		}
-		else {
-			log.warn "Selected song '$song' not found"
-		}
-	}
-	catch (Throwable t) {
-		log.error t
-	}
-}
+//private saveSelectedSong() {
+//	try {
+//		def thisSong = song
+//		log.info "Looking for $thisSong"
+//		def songs = sonos.statesSince("trackData", new Date(0), [max:30]).collect{it.jsonValue}
+//		log.info "Searching ${songs.size()} records"
+//
+//		def data = songs.find {s -> s.station == thisSong}
+//		log.info "Found ${data?.station}"
+//		if (data) {
+//			state.selectedSong = data
+//			log.debug "Selected song = $state.selectedSong"
+//		}
+//		else if (song == state.selectedSong?.station) {
+//			log.debug "Selected existing entry '$song', which is no longer in the last 20 list"
+//		}
+//		else {
+//			log.warn "Selected song '$song' not found"
+//		}
+//	}
+//	catch (Throwable t) {
+//		log.error t
+//	}
+//}
 
 private anythingSet() {
 	for (name in ["motion","contact","contactClosed","acceleration","mySwitch","mySwitchOff","arrivalPresence","departurePresence","smoke","water","button1","timeOfDay","triggerModes","timeOfDay"]) {
@@ -229,9 +230,9 @@ def subscribeToEvents() {
 		schedule(timeOfDay, scheduledTimeHandler)
 	}
 
-	if (song) {
-		saveSelectedSong()
-	}
+	//if (song) {
+	//	saveSelectedSong()
+	//}
 
 	loadText()
 }
@@ -278,21 +279,25 @@ private takeAction(evt) {
 
 	log.trace "takeAction()"
 
-	if (song) {
-		sonos.playSoundAndTrack(state.sound.uri, state.sound.duration, state.selectedSong, volume)
-	}
-	else if (resumePlaying){
-		//sonos.playTrackAndResume(state.sound.uri, state.sound.duration, volume)
-        sonos.playTrackAndResume(state.sound.uri, volume)
-	}
-	else {
-		//sonos.playTrackAndRestore(state.sound.uri, state.sound.duration, volume)
-		sonos.playTrackAndRestore(state.sound.uri, volume)
-	}
+	for(sonos in speakers) {
+		//if (song) {
+		//	sonos.playSoundAndTrack(state.sound.uri, state.sound.duration, state.selectedSong, volume)
+		//}
+		//else if (resumePlaying){
+		if (resumePlaying){
+			//sonos.playTrackAndResume(state.sound.uri, state.sound.duration, volume)
+			sonos.playTrackAndResume(state.sound.uri, volume)
+		}
+		else {
+			//sonos.playTrackAndRestore(state.sound.uri, state.sound.duration, volume)
+			sonos.playTrackAndRestore(state.sound.uri, volume)
+		}
 
-	if (frequency || oncePerDay) {
-		state[frequencyKey(evt)] = now()
+		if (frequency || oncePerDay) {
+			state[frequencyKey(evt)] = now()
+		}
 	}
+	
 	log.trace "Exiting takeAction()"
 }
 
