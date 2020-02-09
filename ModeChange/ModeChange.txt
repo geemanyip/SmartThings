@@ -11,7 +11,7 @@
  *
  *  Name        : Mode Change
  *  Author      : Geeman Yip
- *  Date        : 2020-02-01
+ *  Date        : 2020-02-07
  *  Description : Performs door actions and/or sends notifications when a mode has changed
  *
  */
@@ -84,17 +84,17 @@ def modeChange() {
 		log("modeChange(): Executing mode actions")
 
 		// unlock devices specified
-		if(lockDevices) {
-			log("modeChange(): Locking devices")
-			lockDevices.lock()
+		if(unlockDevices) {
+			log("modeChange(): Unlocking devices")
+			unlockDevices.unlock()
 		}
 		
 		// lock devices specified. secure by default so we're
 		// going to do this after lock action incase there is
 		// overlap between the devices
-		if(unlockDevices) {
-			log("modeChange(): Unlocking devices")
-			unlockDevices.unlock()
+		if(lockDevices) {
+			log("modeChange(): Locking devices")
+			lockDevices.lock()
 		}
 		
 		// execute routine
