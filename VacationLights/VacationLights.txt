@@ -1,0 +1,117 @@
+/**
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ *  Name        : Vacation Lights
+ *  Author      : Geeman Yip
+ *  Date        : 2020-02-13
+ *  Description : Automatically turns lights on or off while on vacation
+ *
+ */
+ 
+definition(
+    name: "Vacation Lights",
+    namespace: "geeman",
+    author: "Geeman Yip",
+    description: "Automatically turns lights on or off while on vacation",
+    category: "Convenience",
+    iconUrl: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/VacationLights/Icon60.png",
+    iconX2Url: "https://raw.githubusercontent.com/geemanyip/SmartThings/master/VacationLights/Icon120.png"
+)
+
+preferences {
+    section("About") {
+        paragraph "Select the lights you wish to randomly turn on and specify the duration to leave them on before turning on different set of lights."
+		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
+    }
+	section("Lights") {
+		input "mode", "mode", title: "Select the mode to enable", multiple: false, required: true
+		input "switches", "capability.switch", title: "Select the lights you wish to randomly turn on", multiple: true, required: true
+		input "numberOfSwitches", "number", title: "Enter the number of switches to turn on", defaultValue: 1, multiple: false, required: true
+		input "onDuration", "number", title: "Enter the number of minutes to leave them on for", defaultValue: 60, multiple: false, required: true
+	}
+}
+
+def log(msg) {
+	if(debug) {
+		def debugMsg = "DEBUG: ${msg}"
+		sendPush(debugMsg)
+	}
+	
+	log.debug msg
+}
+
+def installed() {
+	log("installed()")
+	
+    subscribe()
+}
+
+def updated() {
+	log("updated()")
+	
+    unsubscribe()
+    subscribe()
+}
+
+def subscribe() {
+	log("subscribe()")
+	
+	// subscribe to location changes
+    subscribe(location, "mode", modeHandler)
+}
+
+def modeHandler() {
+	log("modeHandler()")
+	
+	if(location.mode == mode) {
+		log("modeHandler(): Enabled with mode change")
+		
+		// subscribe to sunrise and sunset times
+		subscribe(location, "sunriseTime", sunriseHandler)
+		subscribe(location, "sunsetTime", sunsetHandler)
+	} else {
+		log("modeHandler(): Disabled as not in mode")
+		
+		// remove time handlers
+		unsubscribe(sunriseHandler)
+		unsubscribe(sunsetHandler)
+	}
+}
+
+def sunriseHandler() {
+	log("sunriseHandler()")
+    unsubscribe(turnOn)
+}
+
+def sunsetHandler() {
+	log("sunsetHandler()")
+	// turn on lights
+	turnOn()
+}
+
+def turnOn() {
+	log("turnOn()")	
+	
+	// turn off switches
+	switches.off();
+
+	// turn on random switches
+	for(int i=0; i<numberOfSwitches; i++) {
+		Random rand = new Random()
+		def pos = rand.nextInt(switches.size()); 
+		switches[pos].on()
+		
+		log("turnOn(): Turned on ${switches[pos].displayName} (${pos}/${switches.size()})")
+	}
+	
+	def delay = onDuration * 60
+	runIn(delay, turnOn)
+}
