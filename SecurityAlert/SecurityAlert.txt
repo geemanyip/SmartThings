@@ -11,7 +11,7 @@
  *
  *  Name        : Security Alert
  *  Author      : Geeman Yip
- *  Date        : 2020-02-01
+ *  Date        : 2020-02-13
  *  Description : Notifies you when events are triggered on selected devices
  *
  */
@@ -79,6 +79,10 @@ def subscribe() {
 	// subscribe to lockable device events
 	subscribe(lockDevicesUnlocked, "lock.unlocked", lockEvent)
 	subscribe(lockDevicesLocked, "lock.locked", lockEvent)
+	
+	// subscribe to switch device events
+	subscribe(switchDevicesOn, "switch.on", switchEvent)
+	subscribe(switchDevicesOff, "switch.off", switchEvent)
 }
 
 def contactEvent(evt) {
@@ -138,5 +142,12 @@ def lockEvent(evt) {
 			msg += "${evt.value}"
 			break;
 	}
+	sendPush(msg)
+}
+
+def switchEvent(evt) {
+	log("switchEvent(): ${evt.displayName} changed to ${evt.value}")
+
+	def msg = "${evt.displayName} was turned ${evt.value}"
 	sendPush(msg)
 }
