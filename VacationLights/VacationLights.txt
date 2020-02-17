@@ -34,8 +34,9 @@ preferences {
 	section("Lights") {
 		input "mode", "mode", title: "Select the mode to enable", multiple: false, required: true
 		input "switches", "capability.switch", title: "Select the lights you wish to randomly turn on", multiple: true, required: true
+		input "brightness", "number", title: "Select light level of switches. Uses last setting of not specified. (only works on dimmer switches)", defaultValue: 100, multiple: false, required: true
 		input "numberOfSwitches", "number", title: "Enter the number of switches to turn on", defaultValue: 1, multiple: false, required: true
-		input "onDuration", "number", title: "Enter the number of minutes to leave them on for", defaultValue: 60, multiple: false, required: true
+        input "duration", "enum", title: "Select the number of minutes to leave them on for", defaultValue: "1 hour", options: ["1 minute", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour", "3 hours"], multiple: false, required: true
 	}
 }
 
@@ -64,54 +65,87 @@ def updated() {
 def subscribe() {
 	log("subscribe()")
 	
-	// subscribe to location changes
-    subscribe(location, "mode", modeHandler)
+    switch(duration) {
+    	case "1 minute":
+        	runEvery1Minute(checkMode)
+        	break;
+            
+        case "5 minutes":
+        	runEvery5Minutes(checkMode)
+        	break;
+            
+        case "10 minutes":
+        	runEvery10Minutes(checkMode)
+        	break;
+            
+        case "15 minutes":
+        	runEvery15Minutes(checkMode)
+        	break;
+            
+        case "30 minutes":
+        	runEvery30Minutes(checkMode)
+        	break;
+            
+        case "1 hour":
+        	runEvery1Hour(checkMode)
+        	break;
+            
+        case "3 hours":
+        	runEvery3Hours(checkMode)
+        	break;
+        
+        default:
+        	runEvery1Hour(checkMode)
+        	break;
+    }
+    
+    // run now
+    checkMode()
 }
 
-def modeHandler() {
-	log("modeHandler()")
+def checkMode() {
+	log("checkMode()")
 	
 	if(location.mode == mode) {
-		log("modeHandler(): Enabled with mode change")
-		
-		// subscribe to sunrise and sunset times
-		subscribe(location, "sunriseTime", sunriseHandler)
-		subscribe(location, "sunsetTime", sunsetHandler)
+		log("checkMode(): enabled in mode")
+        
+        //def sunsetTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", location.currentValue("sunsetTime"))
+        //def sunriseTime = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", location.currentValue("sunsetTime"))
+        //def between = timeOfDayIsBetween(sunsetTime, sunriseTime, new Date(), location.timeZone)
+        //if(between) {
+        //	log("checkMode(): Between sunset (${sunsetTime}) and sunrise (${sunriseTime})")
+			randomizeLights()		
+        //} else {
+        //	log("checkMode(): It's daytime")
+        //}
 	} else {
-		log("modeHandler(): Disabled as not in mode")
-		
-		// remove time handlers
-		unsubscribe(sunriseHandler)
-		unsubscribe(sunsetHandler)
+		log("checkMode(): Disabled in mode")
+
+		// turn off switches
+		//switches.off();
 	}
 }
 
-def sunriseHandler() {
-	log("sunriseHandler()")
-    unsubscribe(turnOn)
-}
-
-def sunsetHandler() {
-	log("sunsetHandler()")
-	// turn on lights
-	turnOn()
-}
-
-def turnOn() {
-	log("turnOn()")	
+def randomizeLights() {
+	log("randomizeLights()")	
 	
-	// turn off switches
+	// turn off switches to reset status
 	switches.off();
 
 	// turn on random switches
 	for(int i=0; i<numberOfSwitches; i++) {
 		Random rand = new Random()
-		def pos = rand.nextInt(switches.size()); 
-		switches[pos].on()
+		def pos = rand.nextInt(switches.size());
+        def selectedSwitch = switches[pos]
+        
+        // turn on switch
+		selectedSwitch.on()
+		log("randomizeLights(): Turned on ${selectedSwitch.displayName} (${pos}/${switches.size()})")
 		
-		log("turnOn(): Turned on ${switches[pos].displayName} (${pos}/${switches.size()})")
+        // change brightness
+		if(brightness != null && brightness > 0 && brightness <= 100 && selectedSwitch.hasCommand("setLevel")) {
+			log("randomizeLights(): ${selectedSwitch.displayName} is dimmable")
+			selectedSwitch.setLevel(brightness)
+		}
 	}
-	
-	def delay = onDuration * 60
-	runIn(delay, turnOn)
 }
