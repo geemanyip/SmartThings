@@ -32,7 +32,8 @@ preferences {
 		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
     }
 	section("Settings") {
-		input "devices", "capability.battery", title: "Select devices to retrieve battery level", multiple: true, required: true
+		input "devices", "capability.battery", title: "Select devices to retrieve battery level", multiple: true, required: false
+		input "enabled", "bool", title: "Enable and save to retrieve battery levels now", defaultValue: false, multiple: false, required: true
 	}
 }
 
@@ -47,31 +48,44 @@ def log(msg) {
 
 def installed() {
 	log("installed()")
-    initialize()
+	
+    subscribe()
 }
 
 def updated() {
 	log("updated()")
-    initialize()
+	
+    unsubscribe()	
+    subscribe()
 }
 
-def initialize() {
-	log("initialized()")
+def subscribe() {
+	log("subscribe()")
 	
-	// retrieve battery levels
+	// allow manually playing this app
+	subscribe(app, appHandler)
+	
 	retrieveBatteryLevels()
 }
 
+def appHandler(evt) {
+	log("appHandler()")
+	
+	retrieveBatteryLevels();
+}
+
 def retrieveBatteryLevels() {
-	log("manuallyCheckBatterLevels()")
+	log("retrieveBatteryLevels()")
 	
 	// enumerate devices specified
-	for(device in devices) {
-		// retrieve current battery level
-		def currentValue = device.currentValue("battery").toInteger()
-		
-		// send push notification of battery level
-		def msg = "${device.displayName} battery level is ${currentValue}%"
-		sendPush(msg)
+	if(enabled && devices) {
+		for(device in devices) {
+			// retrieve current battery level
+			def currentValue = device.currentValue("battery").toInteger()
+			
+			// send push notification of battery level
+			def msg = "${device.displayName} battery level is ${currentValue}%"
+			sendPush(msg)
+		}
 	}
 }
