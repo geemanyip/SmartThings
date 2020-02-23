@@ -11,7 +11,7 @@
  *
  *  Name        : Automatic Lights
  *  Author      : Geeman Yip
- *  Date        : 2020-02-02
+ *  Date        : 2020-02-20
  *  Description : Automatically turns lights on or off based on sensor activity
  *
  */
@@ -40,7 +40,7 @@ preferences {
 	section("Automatically Turn Off") {
 		input "offSwitches", "capability.switch", title: "Select switches to turn off automatically", multiple: true, required: false
 		input "offMotions", "capability.motionSensor", title: "Select motion sensors to monitor for inactivity", multiple: true, required: false
-		input "offMotionDuration", "number", title: "Enter the number of minutes of inactivity before switches are turned off", multiple: false, required: false
+		input "offMotionDuration", "number", title: "Enter the number of minutes of inactivity before switches are turned off", defaultValue: 0, multiple: false, required: false
 	}
 }
 
@@ -62,12 +62,15 @@ def installed() {
 def updated() {
 	log("updated()")
 	
-    unsubscribe()
+    unschedule()
     subscribe()
 }
 
 def subscribe() {
 	log("subscribe()")
+	
+	// monitor manually turning off the switches we need to turn on
+	subscribe(onSwitches, "switch", switchEvent)
 	
 	// subscribe to motion sensors for activity
 	subscribe(onMotions, "motion.active", onMotionActivityEvent)
@@ -77,15 +80,21 @@ def subscribe() {
 	subscribe(offMotions, "motion.inactive", offMotionInactivityEvent)
 }
 
+def switchEvent(evt) {
+	switch(evt.value) {
+		case "on":
+			break;
+		
+		default: // off
+			break;
+	}
+}
+
 /* ON EVENTS */
 
 def onMotionActivityEvent(evt) {
 	log("onMotionActivityEvent(): ${evt.displayName} changed to ${evt.value}")
 	
-	// unschedule turn off event -- this prevents some timing issues
-	// which causes the lights to flash
-	unschedule(turnOffSwitches)
-
 	// check if switch off conditions are met
 	def isOn = onSwitchesOff.currentSwitch.findAll { switchVal ->
         switchVal == "on" ? true : false
@@ -118,7 +127,7 @@ def turnOnSwitches() {
 
 def offMotionActivityEvent(evt) {
 	log("offMotionActivityEvent(): ${evt.displayName} changed to ${evt.value}")
-	unschedule(turnOffSwitches)
+	unschedule()
 }
 
 def offMotionInactivityEvent(evt) {
