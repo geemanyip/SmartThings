@@ -11,7 +11,7 @@
  *
  *  Name        : Automatic Lights
  *  Author      : Geeman Yip
- *  Date        : 2020-02-20
+ *  Date        : 2020-02-29
  *  Description : Automatically turns lights on or off based on sensor activity
  *
  */
