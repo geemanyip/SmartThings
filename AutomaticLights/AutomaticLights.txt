@@ -32,15 +32,15 @@ preferences {
 		input "debug", "bool", title: "Enable debug mode. Debug information will be sent as push notifications.", defaultValue: false, multiple: false, required: true
     }
 	section("Automatically Turn On") {
-		input "onSwitches", "capability.switch", title: "Select switches to turn on automatically", multiple: true, required: false
-		input "onSwitchesBrightness", "number", title: "Select light level of switches. Uses last setting of not specified. (only works on dimmer switches)", multiple: false, required: false
-		input "onMotions", "capability.motionSensor", title: "Select motion sensors to turn lights on when activity is detected", multiple: true, required: false
-		input "onSwitchesOff", "capability.switch", title: "Select switches that have to be off in order for light switches to be automatically turned on", multiple: true, required: false
+		input "onMotions", "capability.motionSensor", title: "When motion is detected by the following sensors", multiple: true, required: false
+		input "onSwitchesOff", "capability.switch", title: "And if the following switches are not on", multiple: true, required: false
+		input "onSwitches", "capability.switch", title: "Turn the following switches on", multiple: true, required: false
+		input "onSwitchesBrightness", "number", title: "Set the dimmer to the following value (leave blank for previous setting)", defaultValue: 100, multiple: false, required: false
 	}
 	section("Automatically Turn Off") {
-		input "offSwitches", "capability.switch", title: "Select switches to turn off automatically", multiple: true, required: false
-		input "offMotions", "capability.motionSensor", title: "Select motion sensors to monitor for inactivity", multiple: true, required: false
-		input "offMotionDuration", "number", title: "Enter the number of minutes of inactivity before switches are turned off", defaultValue: 0, multiple: false, required: false
+		input "offMotions", "capability.motionSensor", title: "When there is inactivity detected by the following sensors", multiple: true, required: false
+		input "offMotionDuration", "number", title: "For the following amount of minutes", defaultValue: 3, multiple: false, required: false
+		input "offSwitches", "capability.switch", title: "Turn the following switches off", multiple: true, required: false
 	}
 }
 
